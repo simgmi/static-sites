@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Interactive Video Quiz</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+
+    background:
+        radial-gradient(circle at top, #1e293b, #020617 70%);
+
+    font-family:
+        Inter,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+    color: white;
+}
+
+/* ==============================
+   VIDEO CONTAINER
+============================== */
+
+.video-container {
+    position: relative;
+
+    width: min(100%, 1000px);
+
+    aspect-ratio: 16 / 9;
+
+    background: #000;
+
+    border-radius: 18px;
+
+    overflow: hidden;
+
+    box-shadow:
+        0 30px 80px rgba(0, 0, 0, 0.55);
+}
+
+video {
+    width: 100%;
+    height: 100%;
+
+    display: block;
+
+    object-fit: cover;
+}
+
+
+/* ==============================
+   QUIZ OVERLAY
+============================== */
+
+.quiz-overlay {
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 20;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 25px;
+
+    background:
+        rgba(2, 6, 23, 0.82);
+
+    backdrop-filter: blur(10px);
+
+    opacity: 0;
+    visibility: hidden;
+
+    transform: scale(1.04);
+
+    transition:
+        opacity 0.4s ease,
+        transform 0.4s ease,
+        visibility 0.4s ease;
+}
+
+.quiz-overlay.active {
+    opacity: 1;
+    visibility: visible;
+
+    transform: scale(1);
+}
+
+
+/* ==============================
+   QUIZ CARD
+============================== */
+
+.quiz-card {
+    width: min(100%, 650px);
+
+    max-height: 90%;
+
+    overflow-y: auto;
+
+    padding: 30px;
+
+    border-radius: 22px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(30, 41, 59, 0.98),
+            rgba(15, 23, 42, 0.98)
+        );
+
+    border:
+        1px solid rgba(255,255,255,0.12);
+
+    box-shadow:
+        0 30px 80px rgba(0,0,0,0.55);
+
+    transform:
+        translateY(35px)
+        scale(0.94);
+
+    opacity: 0;
+
+    transition:
+        transform 0.5s cubic-bezier(.2,.8,.2,1),
+        opacity 0.4s ease;
+}
+
+.quiz-overlay.active .quiz-card {
+    transform:
+        translateY(0)
+        scale(1);
+
+    opacity: 1;
+}
+
+
+/* ==============================
+   HEADER
+============================== */
+
+.quiz-header {
+    margin-bottom: 25px;
+}
+
+.quiz-badge {
+    display: inline-flex;
+
+    padding: 6px 12px;
+
+    border-radius: 999px;
+
+    background:
+        rgba(99,102,241,0.15);
+
+    color: #a5b4fc;
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+    margin-bottom: 12px;
+}
+
+.quiz-header h2 {
+    margin: 0 0 8px;
+
+    font-size: clamp(22px, 3vw, 30px);
+
+    line-height: 1.2;
+}
+
+.quiz-header p {
+    margin: 0;
+
+    color: #94a3b8;
+
+    font-size: 14px;
+}
+
+
+/* ==============================
+   PROGRESS
+============================== */
+
+.progress-container {
+    margin-top: 20px;
+}
+
+.progress-text {
+    display: flex;
+
+    justify-content: space-between;
+
+    margin-bottom: 8px;
+
+    color: #94a3b8;
+
+    font-size: 12px;
+}
+
+.progress-bar {
+    width: 100%;
+
+    height: 5px;
+
+    border-radius: 20px;
+
+    background: #334155;
+
+    overflow: hidden;
+}
+
+.progress-fill {
+    width: 0;
+
+    height: 100%;
+
+    border-radius: 20px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #6366f1,
+            #8b5cf6
+        );
+
+    transition:
+        width 0.35s ease;
+}
+
+
+/* ==============================
+   QUESTION
+============================== */
+
+.question {
+    animation:
+        questionIn 0.35s ease;
+}
+
+@keyframes questionIn {
+
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.question-type {
+    margin-bottom: 8px;
+
+    color: #818cf8;
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.08em;
+}
+
+.question-title {
+    margin: 0 0 20px;
+
+    font-size: 18px;
+
+    line-height: 1.5;
+
+    font-weight: 650;
+}
+
+
+/* ==============================
+   OPTIONS
+============================== */
+
+.options {
+    display: grid;
+
+    gap: 11px;
+}
+
+.option {
+    position: relative;
+}
+
+.option input {
+    position: absolute;
+
+    opacity: 0;
+
+    pointer-events: none;
+}
+
+.option label {
+    display: flex;
+
+    align-items: center;
+
+    gap: 13px;
+
+    padding: 15px;
+
+    border:
+        1px solid rgba(255,255,255,0.10);
+
+    border-radius: 13px;
+
+    background:
+        rgba(255,255,255,0.035);
+
+    color: #cbd5e1;
+
+    cursor: pointer;
+
+    transition:
+        all 0.2s ease;
+}
+
+.option label:hover {
+    background:
+        rgba(255,255,255,0.07);
+
+    border-color:
+        rgba(129,140,248,0.5);
+
+    transform:
+        translateY(-1px);
+}
+
+.option input:checked + label {
+    background:
+        rgba(99,102,241,0.16);
+
+    border-color:
+        #6366f1;
+
+    color: white;
+}
+
+
+/* ==============================
+   CUSTOM CONTROL
+============================== */
+
+.control {
+    width: 20px;
+    height: 20px;
+
+    flex: 0 0 20px;
+
+    border:
+        2px solid #64748b;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    transition:
+        all 0.2s ease;
+}
+
+.radio .control {
+    border-radius: 50%;
+}
+
+.checkbox .control {
+    border-radius: 5px;
+}
+
+.option input:checked + label .control {
+    border-color: #818cf8;
+
+    background: #6366f1;
+}
+
+.radio input:checked + label .control::after {
+    content: "";
+
+    width: 7px;
+    height: 7px;
+
+    border-radius: 50%;
+
+    background: white;
+}
+
+.checkbox input:checked + label .control::after {
+    content: "";
+
+    width: 5px;
+    height: 9px;
+
+    border-right:
+        2px solid white;
+
+    border-bottom:
+        2px solid white;
+
+    transform:
+        rotate(45deg)
+        translate(-1px,-1px);
+}
+
+
+/* ==============================
+   FOOTER
+============================== */
+
+.quiz-footer {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 15px;
+
+    margin-top: 30px;
+
+    padding-top: 20px;
+
+    border-top:
+        1px solid rgba(255,255,255,0.08);
+}
+
+.footer-left {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+}
+
+.back-btn,
+.next-btn {
+    border: 0;
+
+    border-radius: 10px;
+
+    padding: 12px 20px;
+
+    font-size: 14px;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        all 0.2s ease;
+}
+
+.back-btn {
+    background:
+        rgba(255,255,255,0.07);
+
+    color: #cbd5e1;
+}
+
+.back-btn:hover {
+    background:
+        rgba(255,255,255,0.12);
+}
+
+.next-btn {
+    background:
+        linear-gradient(
+            135deg,
+            #6366f1,
+            #8b5cf6
+        );
+
+    color: white;
+
+    box-shadow:
+        0 8px 25px
+        rgba(99,102,241,0.3);
+}
+
+.next-btn:hover {
+    transform:
+        translateY(-2px);
+
+    box-shadow:
+        0 12px 30px
+        rgba(99,102,241,0.45);
+}
+
+.next-btn:active {
+    transform:
+        translateY(0);
+}
+
+.error-message {
+    color: #fca5a5;
+
+    font-size: 12px;
+
+    opacity: 0;
+
+    transition:
+        opacity 0.2s ease;
+}
+
+.error-message.show {
+    opacity: 1;
+}
+
+
+/* ==============================
+   COMPLETION
+============================== */
+
+.completion {
+    text-align: center;
+
+    padding: 20px 0;
+}
+
+.completion-icon {
+    width: 60px;
+    height: 60px;
+
+    margin: 0 auto 18px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background:
+        linear-gradient(
+            135deg,
+            #6366f1,
+            #8b5cf6
+        );
+
+    font-size: 28px;
+}
+
+.completion h3 {
+    margin: 0 0 8px;
+
+    font-size: 24px;
+}
+
+.completion p {
+    margin: 0;
+
+    color: #94a3b8;
+}
+
+
+/* ==============================
+   MOBILE
+============================== */
+
+@media (max-width: 600px) {
+
+    body {
+        padding: 0;
+    }
+
+    .video-container {
+        width: 100%;
+
+        min-height: 100vh;
+
+        aspect-ratio: auto;
+
+        border-radius: 0;
+
+        display: flex;
+
+        align-items: center;
+    }
+
+    video {
+        height: auto;
+    }
+
+    .quiz-overlay {
+        padding: 15px;
+    }
+
+    .quiz-card {
+        padding: 20px;
+
+        max-height: 94%;
+    }
+
+    .quiz-header h2 {
+        font-size: 22px;
+    }
+
+    .question-title {
+        font-size: 16px;
+    }
+
+    .option label {
+        padding: 13px;
+    }
+
+    .quiz-footer {
+        align-items: flex-end;
+    }
+}
+</style>
+</head>
+
+
+<body>
+
+<div class="video-container">
+
+    <!-- VIDEO -->
+
+    <video
+        id="video"
+        controls
+        playsinline
+        preload="metadata"
+    >
+        <source
+            src="sec-video.mp4"
+            type="video/mp4"
+        >
+
+        Your browser does not support HTML5 video.
+    </video>
+
+
+    <!-- QUIZ OVERLAY -->
+
+    <div
+        class="quiz-overlay"
+        id="quizOverlay"
+    >
+
+        <div class="quiz-card">
+
+            <div class="quiz-header">
+
+                <div class="quiz-badge">
+                    ✨ Quick Check
+                </div>
+
+                <h2>
+                    Let's check your understanding
+                </h2>
+
+                <p>
+                    Answer each question before continuing the video.
+                </p>
+
+                <div class="progress-container">
+
+                    <div class="progress-text">
+
+                        <span id="progressText">
+                            Question 1 of 3
+                        </span>
+
+                        <span id="progressPercent">
+                            33%
+                        </span>
+
+                    </div>
+
+                    <div class="progress-bar">
+
+                        <div
+                            class="progress-fill"
+                            id="progressFill"
+                        ></div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- FORM -->
+
+            <form id="quizForm">
+
+                <div id="questionContainer"></div>
+
+                <div class="quiz-footer">
+
+                    <div class="footer-left">
+
+                        <button
+                            type="button"
+                            class="back-btn"
+                            id="backBtn"
+                        >
+                            ← Back
+                        </button>
+
+                        <span
+                            class="error-message"
+                            id="errorMessage"
+                        >
+                            Please select an answer.
+                        </span>
+
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="next-btn"
+                        id="nextBtn"
+                    >
+                        Next →
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* =====================================================
+   QUIZ CONFIGURATION
+===================================================== */
+
+/*
+ * Video checkpoints in seconds.
+ *
+ * For example:
+ *
+ * const checkpoints = [10, 30, 60];
+ *
+ * would show a quiz at 10, 30 and 60 seconds.
+ */
+
+const checkpoints = [10];
+
+
+/* =====================================================
+   QUESTIONS
+===================================================== */
+
+const questions = [
+
+    {
+        type: "single",
+
+        question:
+            "What is the main purpose of this video?",
+
+        options: [
+            "Learning a new concept",
+            "Entertainment",
+            "Advertising"
+        ]
+    },
+
+    {
+        type: "multiple",
+
+        question:
+            "Which of the following are important concepts discussed?",
+
+        options: [
+            "Understanding the fundamentals",
+            "Applying the concept",
+            "Reviewing the results",
+            "None of the above"
+        ]
+    },
+
+    {
+        type: "single",
+
+        question:
+            "How confident are you with the topic so far?",
+
+        options: [
+            "Very confident",
+            "Somewhat confident",
+            "I need more explanation"
+        ]
+    }
+
+];
+
+
+/* =====================================================
+   DOM ELEMENTS
+===================================================== */
+
+const video =
+    document.getElementById("video");
+
+const quizOverlay =
+    document.getElementById("quizOverlay");
+
+const quizForm =
+    document.getElementById("quizForm");
+
+const questionContainer =
+    document.getElementById("questionContainer");
+
+const progressText =
+    document.getElementById("progressText");
+
+const progressPercent =
+    document.getElementById("progressPercent");
+
+const progressFill =
+    document.getElementById("progressFill");
+
+const nextBtn =
+    document.getElementById("nextBtn");
+
+const backBtn =
+    document.getElementById("backBtn");
+
+const errorMessage =
+    document.getElementById("errorMessage");
+
+
+/* =====================================================
+   STATE
+===================================================== */
+
+let currentQuestion = 0;
+
+let quizIsOpen = false;
+
+let activeCheckpoint = null;
+
+let lastVideoTime = 0;
+
+const triggeredCheckpoints = new Set();
+
+
+/*
+ * Stores answers.
+ *
+ * Example:
+ *
+ * {
+ *   0: "Learning a new concept",
+ *   1: [
+ *       "Understanding the fundamentals",
+ *       "Applying the concept"
+ *   ],
+ *   2: "Very confident"
+ * }
+ */
+
+const answers = {};
+
+
+/* =====================================================
+   RENDER QUESTION
+===================================================== */
+
+function renderQuestion() {
+
+    const question =
+        questions[currentQuestion];
+
+    const isMultiple =
+        question.type === "multiple";
+
+    const percent =
+        Math.round(
+            ((currentQuestion + 1) /
+            questions.length) * 100
+        );
+
+
+    /* Update progress */
+
+    progressText.textContent =
+        `Question ${currentQuestion + 1} of ${questions.length}`;
+
+    progressPercent.textContent =
+        `${percent}%`;
+
+    progressFill.style.width =
+        `${percent}%`;
+
+
+    /* Question HTML */
+
+    let html = `
+
+        <div class="question">
+
+            <div class="question-type">
+
+                ${
+                    isMultiple
+                    ? "Multiple selection"
+                    : "Single selection"
+                }
+
+            </div>
+
+            <h3 class="question-title">
+
+                ${currentQuestion + 1}.
+                ${question.question}
+
+            </h3>
+
+            <div class="options">
+    `;
+
+
+    question.options.forEach(
+        (option, index) => {
+
+            const inputId =
+                `question-${currentQuestion}-${index}`;
+
+            const inputName =
+                `question-${currentQuestion}`;
+
+            const type =
+                isMultiple
+                ? "checkbox"
+                : "radio";
+
+
+            html += `
+
+                <div class="option ${type}">
+
+                    <input
+                        type="${type}"
+                        id="${inputId}"
+                        name="${inputName}"
+                        value="${escapeHtml(option)}"
+                    >
+
+                    <label for="${inputId}">
+
+                        <span class="control"></span>
+
+                        <span>
+                            ${escapeHtml(option)}
+                        </span>
+
+                    </label>
+
+                </div>
+
+            `;
+        }
+    );
+
+
+    html += `
+            </div>
+
+        </div>
+    `;
+
+
+    questionContainer.innerHTML =
+        html;
+
+
+    /*
+     * Restore previously selected answer
+     */
+
+    restoreAnswer();
+
+
+    /*
+     * Back button
+     */
+
+    backBtn.style.visibility =
+        currentQuestion === 0
+        ? "hidden"
+        : "visible";
+
+
+    /*
+     * Button text
+     */
+
+    nextBtn.textContent =
+        currentQuestion === questions.length - 1
+        ? "Finish ✓"
+        : "Next →";
+
+
+    errorMessage.classList.remove("show");
+}
+
+
+/* =====================================================
+   ESCAPE HTML
+===================================================== */
+
+function escapeHtml(value) {
+
+    return value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+/* =====================================================
+   SAVE CURRENT ANSWER
+===================================================== */
+
+function saveCurrentAnswer() {
+
+    const question =
+        questions[currentQuestion];
+
+    const name =
+        `question-${currentQuestion}`;
+
+
+    if (question.type === "multiple") {
+
+        const selected =
+            document.querySelectorAll(
+                `input[name="${name}"]:checked`
+            );
+
+        answers[currentQuestion] =
+            Array.from(selected).map(
+                input => input.value
+            );
+
+    } else {
+
+        const selected =
+            document.querySelector(
+                `input[name="${name}"]:checked`
+            );
+
+        answers[currentQuestion] =
+            selected
+            ? selected.value
+            : null;
+    }
+}
+
+
+/* =====================================================
+   RESTORE ANSWER
+===================================================== */
+
+function restoreAnswer() {
+
+    const saved =
+        answers[currentQuestion];
+
+    if (!saved) {
+        return;
+    }
+
+
+    if (
+        questions[currentQuestion].type ===
+        "multiple"
+    ) {
+
+        saved.forEach(value => {
+
+            const input =
+                document.querySelector(
+                    `input[name="question-${currentQuestion}"][value="${CSS.escape(value)}"]`
+                );
+
+            if (input) {
+                input.checked = true;
+            }
+        });
+
+    } else {
+
+        const input =
+            document.querySelector(
+                `input[name="question-${currentQuestion}"][value="${CSS.escape(saved)}"]`
+            );
+
+        if (input) {
+            input.checked = true;
+        }
+    }
+}
+
+
+/* =====================================================
+   VALIDATE CURRENT QUESTION
+===================================================== */
+
+function validateQuestion() {
+
+    const question =
+        questions[currentQuestion];
+
+    const name =
+        `question-${currentQuestion}`;
+
+
+    if (question.type === "multiple") {
+
+        const selected =
+            document.querySelectorAll(
+                `input[name="${name}"]:checked`
+            );
+
+        if (selected.length === 0) {
+
+            errorMessage.classList.add("show");
+
+            return false;
+        }
+
+    } else {
+
+        const selected =
+            document.querySelector(
+                `input[name="${name}"]:checked`
+            );
+
+        if (!selected) {
+
+            errorMessage.classList.add("show");
+
+            return false;
+        }
+    }
+
+
+    errorMessage.classList.remove("show");
+
+    return true;
+}
+
+
+/* =====================================================
+   NEXT BUTTON / FORM SUBMIT
+===================================================== */
+
+quizForm.addEventListener(
+    "submit",
+    function(event) {
+
+        event.preventDefault();
+
+
+        if (!validateQuestion()) {
+            return;
+        }
+
+
+        saveCurrentAnswer();
+
+
+        /*
+         * More questions remaining
+         */
+
+        if (
+            currentQuestion <
+            questions.length - 1
+        ) {
+
+            currentQuestion++;
+
+            renderQuestion();
+
+            return;
+        }
+
+
+        /*
+         * Quiz finished
+         */
+
+        finishQuiz();
+    }
+);
+
+
+/* =====================================================
+   BACK BUTTON
+===================================================== */
+
+backBtn.addEventListener(
+    "click",
+    function() {
+
+        if (currentQuestion === 0) {
+            return;
+        }
+
+
+        saveCurrentAnswer();
+
+        currentQuestion--;
+
+        renderQuestion();
+    }
+);
+
+
+/* =====================================================
+   FINISH QUIZ
+===================================================== */
+
+function finishQuiz() {
+
+    console.log(
+        "Quiz completed:",
+        answers
+    );
+
+
+    /*
+     * You can send answers to your backend here.
+     *
+     * Example:
+     *
+     * fetch("/api/quiz", {
+     *     method: "POST",
+     *     headers: {
+     *         "Content-Type": "application/json"
+     *     },
+     *     body: JSON.stringify(answers)
+     * });
+     */
+
+
+    questionContainer.innerHTML = `
+
+        <div class="completion">
+
+            <div class="completion-icon">
+                ✓
+            </div>
+
+            <h3>
+                Great job!
+            </h3>
+
+            <p>
+                You've completed the questions.
+                The video will continue shortly.
+            </p>
+
+        </div>
+
+    `;
+
+
+    progressText.textContent =
+        "Completed";
+
+    progressPercent.textContent =
+        "100%";
+
+    progressFill.style.width =
+        "100%";
+
+
+    backBtn.style.display =
+        "none";
+
+    nextBtn.style.display =
+        "none";
+
+
+    /*
+     * Close quiz after the animation.
+     */
+
+    setTimeout(
+        resumeVideo,
+        1200
+    );
+}
+
+
+/* =====================================================
+   SHOW QUIZ
+===================================================== */
+
+function showQuiz() {
+
+    quizIsOpen = true;
+
+    currentQuestion = 0;
+
+    renderQuestion();
+
+    quizOverlay.classList.add("active");
+
+    document.body.style.overflow = "hidden";
+}
+
+
+/* =====================================================
+   HIDE QUIZ
+===================================================== */
+
+function hideQuiz() {
+
+    quizOverlay.classList.remove("active");
+
+    document.body.style.overflow = "";
+}
+
+
+/* =====================================================
+   RESUME VIDEO
+===================================================== */
+
+function resumeVideo() {
+
+    hideQuiz();
+
+
+    /*
+     * Wait for popup closing animation.
+     */
+
+    setTimeout(
+        function() {
+
+            quizIsOpen = false;
+
+
+            /*
+             * Move slightly beyond checkpoint.
+             *
+             * This prevents the checkpoint from
+             * triggering again.
+             */
+
+            if (activeCheckpoint !== null) {
+
+                video.currentTime =
+                    activeCheckpoint + 0.05;
+            }
+
+
+            lastVideoTime =
+                video.currentTime;
+
+
+            /*
+             * Resume playback.
+             */
+
+            video.play().catch(
+                error => {
+
+                    console.log(
+                        "Video could not resume:",
+                        error
+                    );
+
+                }
+            );
+
+
+            /*
+             * Reset footer for a future checkpoint.
+             */
+
+            backBtn.style.display = "";
+
+            nextBtn.style.display = "";
+
+        },
+        450
+    );
+}
+
+
+/* =====================================================
+   VIDEO CHECKPOINT MONITOR
+===================================================== */
+
+function monitorVideo() {
+
+    if (
+        !video.paused &&
+        !video.ended &&
+        !quizIsOpen
+    ) {
+
+        const currentTime =
+            video.currentTime;
+
+
+        checkpoints.forEach(
+            checkpoint => {
+
+                const crossed =
+                    lastVideoTime < checkpoint &&
+                    currentTime >= checkpoint;
+
+
+                if (
+                    crossed &&
+                    !triggeredCheckpoints.has(
+                        checkpoint
+                    )
+                ) {
+
+                    /*
+                     * Mark checkpoint as triggered.
+                     */
+
+                    triggeredCheckpoints.add(
+                        checkpoint
+                    );
+
+
+                    activeCheckpoint =
+                        checkpoint;
+
+
+                    /*
+                     * Pause video.
+                     */
+
+                    video.pause();
+
+
+                    /*
+                     * Put video exactly
+                     * at checkpoint.
+                     */
+
+                    video.currentTime =
+                        checkpoint;
+
+
+                    /*
+                     * Show quiz.
+                     */
+
+                    showQuiz();
+                }
+            }
+        );
+
+
+        lastVideoTime =
+            currentTime;
+    }
+
+
+    requestAnimationFrame(
+        monitorVideo
+    );
+}
+
+
+/* =====================================================
+   PREVENT SEEKING PAST UNANSWERED CHECKPOINT
+===================================================== */
+
+video.addEventListener(
+    "seeking",
+    function() {
+
+        if (quizIsOpen) {
+            return;
+        }
+
+
+        const nextCheckpoint =
+            checkpoints.find(
+                checkpoint =>
+                    !triggeredCheckpoints.has(
+                        checkpoint
+                    )
+            );
+
+
+        if (
+            nextCheckpoint !== undefined &&
+            video.currentTime >=
+            nextCheckpoint
+        ) {
+
+            video.pause();
+
+
+            video.currentTime =
+                nextCheckpoint;
+
+
+            triggeredCheckpoints.add(
+                nextCheckpoint
+            );
+
+
+            activeCheckpoint =
+                nextCheckpoint;
+
+
+            showQuiz();
+        }
+
+
+        lastVideoTime =
+            video.currentTime;
+    }
+);
+
+
+/* =====================================================
+   VIDEO PLAY
+===================================================== */
+
+video.addEventListener(
+    "play",
+    function() {
+
+        lastVideoTime =
+            video.currentTime;
+    }
+);
+
+
+/* =====================================================
+   START MONITORING
+===================================================== */
+
+requestAnimationFrame(
+    monitorVideo
+);
+
+
+/* =====================================================
+   TESTING FUNCTION
+===================================================== */
+
+/*
+ * Open browser console and run:
+ *
+ * resetQuiz();
+ *
+ * to restart the video and quiz.
+ */
+
+function resetQuiz() {
+
+    triggeredCheckpoints.clear();
+
+    activeCheckpoint = null;
+
+    quizIsOpen = false;
+
+    currentQuestion = 0;
+
+    Object.keys(answers).forEach(
+        key => delete answers[key]
+    );
+
+    hideQuiz();
+
+    video.currentTime = 0;
+
+    lastVideoTime = 0;
+
+    video.play();
+}
+
+</script>
+
+</body>
+</html>
